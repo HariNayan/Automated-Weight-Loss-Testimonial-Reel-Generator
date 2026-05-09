@@ -60,7 +60,7 @@ const PROCESSING_STEPS = [
     "AI is analyzing for key moments...",
     "Identifying the hook, problem, and results...",
     "Assembling the most impactful clips...",
-    "Rendering your final 9:16 reel in-browser...",
+    "Rendering your final 9:16 reel in a background thread...",
     "Adding finishing touches...",
 ];
 
@@ -71,72 +71,143 @@ interface Clip {
     end: number;
 }
 
+const workerCode = `
+self.onmessage = (event) => {
+  let recorder;
+  let canvas;
+  let ctx;
+  let videoWidth, videoHeight;
+  const chunks = [];
+
+  const handleDataAvailable = (e) => {
+    if (e.data.size > 0) chunks.push(e.data);
+  };
+
+  const handleStop = () => {
+    const blob = new Blob(chunks, { type: 'video/webm' });
+    self.postMessage({ type: 'result', blob });
+    self.close();
+  };
+  
+  const drawFrame = (frame) => {
+      const scale = Math.min(canvas.width / videoWidth, canvas.height / videoHeight);
+      const renderWidth = videoWidth * scale;
+      const renderHeight = videoHeight * scale;
+      const x = (canvas.width - renderWidth) / 2;
+      const y = (canvas.height - renderHeight) / 2;
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(frame, x, y, renderWidth, renderHeight);
+      frame.close();
+  };
+
+  const messageHandler = (msg) => {
+      switch (msg.data.type) {
+          case 'init':
+              canvas = msg.data.canvas;
+              videoWidth = msg.data.videoWidth;
+              videoHeight = msg.data.videoHeight;
+              ctx = canvas.getContext('2d');
+              if (!ctx) {
+                  self.postMessage({ type: 'error', message: 'Failed to get OffscreenCanvas context' });
+                  return;
+              }
+              const stream = canvas.captureStream(30);
+              recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
+              recorder.ondataavailable = handleDataAvailable;
+              recorder.onstop = handleStop;
+              recorder.start();
+              break;
+          case 'frame':
+              drawFrame(msg.data.frame);
+              break;
+          case 'stop':
+              recorder.stop();
+              break;
+      }
+  };
+  
+  self.addEventListener('message', messageHandler);
+};
+`;
+
 const App: React.FC = () => {
     const [status, setStatus] = useState<Status>(Status.Idle);
     const [videoFile, setVideoFile] = useState<File | null>(null);
     const [reelUrl, setReelUrl] = useState<string | null>(null);
     const [errorMessage, setErrorMessage] = useState<string>('');
     const [processingStep, setProcessingStep] = useState(0);
+    const workerRef = useRef<Worker | null>(null);
 
     const ai = useRef(
         process.env.API_KEY ? new GoogleGenAI({ apiKey: process.env.API_KEY }) : null
     ).current;
 
     const videoRef = useRef<HTMLVideoElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    
+    useEffect(() => {
+      // Create and manage the worker lifecycle.
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      const worker = new Worker(workerUrl);
+      workerRef.current = worker;
+  
+      return () => {
+        worker.terminate();
+        URL.revokeObjectURL(workerUrl);
+      };
+    }, []);
+
 
     const assembleReelOnClient = useCallback(async (sourceFile: File, playlist: Clip[]): Promise<string> => {
         return new Promise(async (resolve, reject) => {
-            if (!videoRef.current || !canvasRef.current) {
-                return reject(new Error("Video or Canvas refs not available"));
-            }
+            const worker = workerRef.current;
+            if (!worker) return reject(new Error("Worker not initialized"));
+            if (!videoRef.current) return reject(new Error("Video ref not available"));
 
+            const offscreenCanvasEl = document.createElement('canvas');
             const video = videoRef.current;
-            const canvas = canvasRef.current;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return reject(new Error("Could not get canvas context"));
-
             const videoUrl = URL.createObjectURL(sourceFile);
             video.src = videoUrl;
-            
-            await new Promise<void>(resolve_load => {
+
+            await new Promise<void>((resolve_load, reject_load) => {
                 video.onloadedmetadata = () => {
                     const targetAspectRatio = 9 / 16;
-                    canvas.width = 540; // Standard reel width
-                    canvas.height = canvas.width / targetAspectRatio;
+                    offscreenCanvasEl.width = 540;
+                    offscreenCanvasEl.height = offscreenCanvasEl.width / targetAspectRatio;
                     resolve_load();
                 };
+                video.onerror = () => reject_load(new Error("Failed to load video metadata."));
             });
+
+            const offscreenCanvas = offscreenCanvasEl.transferControlToOffscreen();
             
-            const stream = canvas.captureStream(30); // 30 FPS
-            const recorder = new MediaRecorder(stream, { mimeType: 'video/webm; codecs=vp9' });
-            const chunks: Blob[] = [];
-
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) chunks.push(e.data);
+            worker.onmessage = (event) => {
+                if (event.data.type === 'result') {
+                    const url = URL.createObjectURL(event.data.blob);
+                    URL.revokeObjectURL(videoUrl);
+                    resolve(url);
+                } else if (event.data.type === 'error') {
+                    reject(new Error(event.data.message));
+                }
             };
+            worker.onerror = (e) => reject(e);
 
-            recorder.onstop = () => {
-                const blob = new Blob(chunks, { type: 'video/webm' });
-                const url = URL.createObjectURL(blob);
-                URL.revokeObjectURL(videoUrl);
-                resolve(url);
-            };
+            worker.postMessage({
+                type: 'init',
+                canvas: offscreenCanvas,
+                videoWidth: video.videoWidth,
+                videoHeight: video.videoHeight,
+            }, [offscreenCanvas]);
             
-            recorder.onerror = (e) => reject(e);
-
-            recorder.start();
-
             for (const clip of playlist) {
                 await new Promise<void>(resolve_clip => {
                     let rafId: number;
 
-                    const onSeeked = () => {
-                        video.play();
-                    };
+                    const onSeeked = () => video.play();
 
                     const onPlay = () => {
-                        const drawFrame = () => {
+                        const processFrame = () => {
                             if (video.currentTime >= clip.end || video.paused) {
                                 video.pause();
                                 cancelAnimationFrame(rafId);
@@ -145,36 +216,15 @@ const App: React.FC = () => {
                                 resolve_clip();
                                 return;
                             }
-                           
-                            // Letterbox/Pillarbox logic
-                            const videoAspectRatio = video.videoWidth / video.videoHeight;
-                            const canvasAspectRatio = canvas.width / canvas.height;
-                            let dWidth, dHeight, dx, dy;
-
-                            if (videoAspectRatio > canvasAspectRatio) {
-                                // Video is wider than canvas -> letterbox (bars top/bottom)
-                                dWidth = canvas.width;
-                                dHeight = dWidth / videoAspectRatio;
-                                dx = 0;
-                                dy = (canvas.height - dHeight) / 2;
-                            } else {
-                                // Video is taller or same aspect as canvas -> pillarbox (bars left/right)
-                                dHeight = canvas.height;
-                                dWidth = dHeight * videoAspectRatio;
-                                dy = 0;
-                                dx = (canvas.width - dWidth) / 2;
-                            }
-
-                            // Fill background with black for the bars
-                            ctx.fillStyle = 'black';
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
                             
-                            // Draw the video frame, scaled and centered
-                            ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, dx, dy, dWidth, dHeight);
+                            // Create a VideoFrame and transfer it to the worker
+                            // This is more efficient than createImageBitmap
+                            const frame = new VideoFrame(video, { timestamp: video.currentTime * 1e6 });
+                            worker.postMessage({ type: 'frame', frame: frame }, [frame]);
 
-                            rafId = requestAnimationFrame(drawFrame);
+                            rafId = requestAnimationFrame(processFrame);
                         };
-                        rafId = requestAnimationFrame(drawFrame);
+                        rafId = requestAnimationFrame(processFrame);
                     };
 
                     video.addEventListener('seeked', onSeeked, { once: true });
@@ -183,7 +233,7 @@ const App: React.FC = () => {
                 });
             }
 
-            recorder.stop();
+            worker.postMessage({ type: 'stop' });
         });
     }, []);
 
@@ -338,7 +388,6 @@ ${JSON.stringify(transcript)}
         <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-900">
             {/* Hidden elements for client-side processing */}
             <video ref={videoRef} style={{ display: 'none' }} muted playsInline />
-            <canvas ref={canvasRef} style={{ display: 'none' }} />
 
             <div className="w-full max-w-2xl mx-auto">
                 <header className="text-center mb-10">

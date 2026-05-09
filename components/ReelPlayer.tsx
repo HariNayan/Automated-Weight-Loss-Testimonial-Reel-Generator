@@ -9,17 +9,28 @@ interface ReelPlayerProps {
 
 const ReelPlayer: React.FC<ReelPlayerProps> = ({ videoUrl, onReset }) => {
     return (
-        <div className="flex flex-col items-center">
-            <h2 className="text-2xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-green-300 via-blue-500 to-purple-600">Your Reel is Ready!</h2>
-            <p className="text-slate-400 mb-6 text-center">Preview your AI-generated testimonial below.</p>
+        <div className="flex flex-col items-center w-full">
+            <h2 className="text-3xl font-serif-display font-light text-center mb-3 text-white">
+                Your <span className="italic text-[#ff4e00]">Reel</span> is Ready
+            </h2>
+            <p className="text-white/40 mb-10 text-center font-light tracking-wide">
+                Preview your AI-crafted testimonial below
+            </p>
             
-            {/* Phone Mockup */}
-            <div className="relative mx-auto border-gray-800 dark:border-gray-800 bg-gray-800 border-[10px] rounded-[2.5rem] h-[520px] w-[260px] shadow-xl mb-8">
-                <div className="w-[140px] h-[14px] bg-gray-800 top-0 rounded-b-[1rem] left-1/2 -translate-x-1/2 absolute"></div>
-                <div className="h-[32px] w-[3px] bg-gray-800 absolute -start-[13px] top-[72px] rounded-s-lg"></div>
-                <div className="h-[32px] w-[3px] bg-gray-800 absolute -start-[13px] top-[124px] rounded-s-lg"></div>
-                <div className="h-[48px] w-[3px] bg-gray-800 absolute -end-[13px] top-[120px] rounded-e-lg"></div>
-                <div className="rounded-[2rem] overflow-hidden w-full h-full bg-slate-950">
+            {/* Elegant Phone Mockup */}
+            <div className="relative mx-auto border-white/10 bg-[#0a0a0a] border-[8px] rounded-[2.5rem] h-[520px] w-[260px] shadow-[0_30px_60px_rgba(0,0,0,0.8),0_0_40px_rgba(255,78,0,0.1)] mb-12 overflow-hidden group">
+                {/* Dynamic notch */}
+                <div className="w-[120px] h-[24px] bg-[#0a0a0a] rounded-b-[1rem] absolute left-1/2 -translate-x-1/2 top-0 z-20 flex justify-center items-end pb-1.5">
+                    <div className="w-12 h-1.5 rounded-full bg-white/5"></div>
+                </div>
+                
+                {/* Hardware buttons */}
+                <div className="h-[32px] w-[3px] bg-white/10 absolute -left-[11px] top-[72px] rounded-l-lg"></div>
+                <div className="h-[60px] w-[3px] bg-white/10 absolute -left-[11px] top-[124px] rounded-l-lg"></div>
+                <div className="h-[60px] w-[3px] bg-white/10 absolute -right-[11px] top-[120px] rounded-r-lg"></div>
+                
+                {/* Screen content */}
+                <div className="rounded-[2.2rem] overflow-hidden w-full h-full bg-[#050505] relative">
                     <video
                         src={videoUrl}
                         className="w-full h-full object-cover"
@@ -31,18 +42,18 @@ const ReelPlayer: React.FC<ReelPlayerProps> = ({ videoUrl, onReset }) => {
                 </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center">
+            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center px-4">
                 <a
                     href={videoUrl}
                     download="testimonial-reel.mp4"
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-105"
+                    className="flex items-center justify-center gap-3 w-full sm:w-auto bg-white hover:bg-gray-100 text-black font-medium py-3.5 px-8 rounded-full transition-all duration-300 transform hover:-translate-y-0.5"
                 >
                     <DownloadIcon className="w-5 h-5" />
                     Download Reel
                 </a>
                 <button
                     onClick={onReset}
-                    className="flex items-center justify-center gap-2 w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-lg transition-colors"
+                    className="flex items-center justify-center gap-3 w-full sm:w-auto bg-transparent border border-white/20 hover:border-white/40 hover:bg-white/5 text-white font-medium py-3.5 px-8 rounded-full transition-all duration-300"
                 >
                     <ReplayIcon className="w-5 h-5" />
                     Create Another

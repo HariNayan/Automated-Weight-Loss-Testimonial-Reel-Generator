@@ -1,1 +1,76 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --color-bg-dark: #070707;
+  --color-accent: #ff4e00;
+  --color-accent-dim: rgba(255, 78, 0, 0.15);
+  --glass-surface: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.06);
+}
+
+body {
+  background-color: var(--color-bg-dark);
+  color: #fff;
+  font-family: 'Inter', -apple-system, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.atmosphere-bg {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background:
+    radial-gradient(circle at 50% -20%, var(--color-accent-dim) 0%, transparent 60%),
+    radial-gradient(circle at 100% 80%, rgba(100, 50, 255, 0.05) 0%, transparent 50%);
+  filter: blur(80px);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.glass-panel {
+  background: var(--glass-surface);
+  backdrop-filter: blur(30px);
+  -webkit-backdrop-filter: blur(30px);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+}
+
+.btn-primary {
+  background-color: #fff;
+  color: #000;
+  transition: all 0.2s ease;
+  border-radius: 9999px;
+}
+.btn-primary:hover {
+  background-color: #f0f0f0;
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background-color: transparent;
+  color: #fff;
+  border: 1px solid var(--glass-border);
+  transition: all 0.2s ease;
+  border-radius: 9999px;
+}
+.btn-secondary:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.font-serif-display {
+  font-family: 'Georgia', serif;
+}
+
+.micro-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.5);
+}

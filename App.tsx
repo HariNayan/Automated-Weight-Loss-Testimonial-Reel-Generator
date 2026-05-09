@@ -368,12 +368,15 @@ ${JSON.stringify(transcript)}
                 return null;
             case Status.Error:
                 return (
-                    <div className="text-center">
-                        <h3 className="text-xl font-bold text-red-400 mb-4">Something went wrong</h3>
-                        <p className="text-slate-400 mb-6">{errorMessage}</p>
+                    <div className="text-center py-12 flex flex-col items-center">
+                        <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
+                            <span className="text-red-400 text-2xl font-serif-display">!</span>
+                        </div>
+                        <h3 className="text-2xl font-serif-display font-light text-white mb-3 tracking-wide">Something went wrong</h3>
+                        <p className="text-white/50 mb-10 max-w-md font-light leading-relaxed">{errorMessage}</p>
                         <button
                             onClick={handleReset}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+                            className="bg-white hover:bg-gray-100 text-black font-medium py-3 px-8 rounded-full transition-all duration-300 transform hover:-translate-y-0.5"
                         >
                             Try Again
                         </button>
@@ -385,26 +388,29 @@ ${JSON.stringify(transcript)}
     };
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 bg-slate-900">
+        <div className="min-h-screen flex items-center justify-center p-4 sm:p-8 relative">
+            <div className="atmosphere-bg"></div>
             {/* Hidden elements for client-side processing */}
             <video ref={videoRef} style={{ display: 'none' }} muted playsInline />
 
-            <div className="w-full max-w-2xl mx-auto">
-                <header className="text-center mb-10">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold text-white mb-3 flex items-center justify-center gap-3">
-                        <SparklesIcon className="w-8 h-8 text-yellow-400" />
-                        AI Reel Generator
-                        <SparklesIcon className="w-8 h-8 text-yellow-400" />
+            <div className="w-full max-w-3xl mx-auto flex flex-col items-center">
+                <header className="text-center mb-12">
+                    <div className="inline-flex items-center justify-center gap-2 mb-4 px-4 py-1.5 rounded-full border border-white/10 bg-white/5">
+                        <SparklesIcon className="w-4 h-4 text-[#ff4e00]" />
+                        <span className="micro-label text-white/70">Powered by Gemini AI</span>
+                    </div>
+                    <h1 className="text-5xl sm:text-7xl font-serif-display font-light text-white mb-4 tracking-tight leading-tight">
+                        Transform Stories<br/><span className="italic text-white/50">Into Reels</span>
                     </h1>
-                    <p className="text-lg text-slate-400">
-                        Transform weight loss testimonials into powerful, social-media-ready reels in seconds.
+                    <p className="text-lg text-white/40 max-w-md mx-auto font-light">
+                        Upload long-form testimonials. Let AI craft engaging, perfectly-paced 9:16 videos.
                     </p>
                 </header>
-                <main className="bg-slate-800/50 border border-slate-700 rounded-2xl p-8 shadow-2xl shadow-slate-950/50 backdrop-blur-sm">
+                <main className="w-full glass-panel p-8 sm:p-12 shadow-2xl">
                     {renderContent()}
                 </main>
-                 <footer className="text-center mt-8 text-slate-500 text-sm">
-                    <p>Powered by Gemini & In-Browser Video Processing</p>
+                 <footer className="text-center mt-12 mb-8 text-white/30 text-xs tracking-wider uppercase">
+                    <p>In-Browser Studio • Local Processing</p>
                 </footer>
             </div>
         </div>

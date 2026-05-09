@@ -1,5 +1,6 @@
 {
   "name": "Automated Weight Loss Testimonial Reel Generator",
   "description": "An AI-powered application that automatically transforms a long-form weight loss journey testimonial video into an engaging, 60-90 second social media reel.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "majorCapabilities": []
 }
